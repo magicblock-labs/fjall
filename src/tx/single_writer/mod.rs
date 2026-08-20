@@ -107,6 +107,17 @@ impl TxDatabase {
         self.inner.persist(mode)
     }
 
+    /// Flushes all journaled writes into LSM-tree tables and starts a new journal.
+    ///
+    /// See [`Database::checkpoint`] for details.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the checkpoint fails.
+    pub fn checkpoint(&self) -> crate::Result<()> {
+        self.inner.checkpoint()
+    }
+
     /// Creates or opens a keyspace.
     ///
     /// If the keyspace does not yet exist, it will be created configured with `create_options`.

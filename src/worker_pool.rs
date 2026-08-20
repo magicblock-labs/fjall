@@ -226,7 +226,7 @@ fn worker_tick(ctx: &WorkerState) -> crate::Result<bool> {
             }
 
             run_flush(
-                &task,
+                &task.keyspace,
                 &ctx.supervisor.write_buffer_size,
                 &ctx.supervisor.snapshot_tracker,
                 &ctx.stats,

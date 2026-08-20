@@ -6,7 +6,7 @@ use crate::{
     batch::WriteBatch,
     db_config::Config,
     file::{fsync_directory, KEYSPACES_FOLDER, LOCK_FILE, VERSION_MARKER},
-    flush::manager::FlushManager,
+    flush::{manager::FlushManager, worker::run as run_flush},
     journal::{manager::JournalManager, writer::PersistMode, Journal},
     keyspace::{name::is_valid_keyspace_name, KeyspaceKey},
     locked_file::LockedFileGuard,
@@ -358,6 +358,67 @@ impl Database {
             );
             self.is_poisoned.poison();
         })?;
+
+        Ok(())
+    }
+
+    /// Flushes all journaled writes into LSM-tree tables and starts a new journal.
+    ///
+    /// This blocks writes and keyspace changes for the duration of the checkpoint. Reads may
+    /// continue. The database remains usable afterwards, and reopening it does not need to replay
+    /// writes preceding the checkpoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if rotating the journal, flushing a keyspace, or syncing the database
+    /// directory fails. A failure poisons the database.
+    pub fn checkpoint(&self) -> crate::Result<()> {
+        self.checkpoint_inner().inspect_err(|e| {
+            log::error!("Checkpoint failed, database is poisoned: {e:?}");
+            self.is_poisoned.poison();
+        })
+    }
+
+    fn checkpoint_inner(&self) -> crate::Result<()> {
+        let mut journal = self.supervisor.journal.get_writer()?;
+
+        // Check after acquiring the journal lock so a concurrent failure cannot race us.
+        if self.is_poisoned.is_poisoned() {
+            return Err(crate::Error::Poisoned);
+        }
+
+        let keyspaces = self
+            .supervisor
+            .keyspaces
+            .read()
+            .map_err(|_| crate::Error::Poisoned)?;
+        let watermarks = self.supervisor.build_seqno_map(&keyspaces);
+
+        self.supervisor
+            .journal_manager
+            .write()
+            .map_err(|_| crate::Error::Poisoned)?
+            .rotate_journal(&mut journal, watermarks)?;
+
+        for keyspace in keyspaces.values() {
+            keyspace.tree.rotate_memtable();
+
+            while keyspace.tree.sealed_memtable_count() > 0 {
+                run_flush(
+                    keyspace,
+                    &self.supervisor.write_buffer_size,
+                    &self.supervisor.snapshot_tracker,
+                    &self.stats,
+                )?;
+            }
+        }
+
+        self.supervisor
+            .journal_manager
+            .write()
+            .map_err(|_| crate::Error::Poisoned)?
+            .maintenance()?;
+        fsync_directory(&self.config.path)?;
 
         Ok(())
     }
