@@ -401,6 +401,8 @@ impl Database {
             .map_err(|_| crate::Error::Poisoned)?
             .rotate_journal(&mut journal, watermarks)?;
 
+        self.supervisor.snapshot_tracker.advance_gc_watermark();
+
         for keyspace in keyspaces.values() {
             keyspace.tree.rotate_memtable();
 
