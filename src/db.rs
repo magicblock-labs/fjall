@@ -362,25 +362,25 @@ impl Database {
         Ok(())
     }
 
-    /// Flushes all journaled writes into LSM-tree tables and starts a new journal.
+    /// Synchronously flushes all keyspaces into LSM-tree tables and starts a new journal.
     ///
-    /// This blocks writes and keyspace changes for the duration of the checkpoint.
+    /// This blocks writes and keyspace changes for the duration of the operation.
     /// Reads may continue.
     /// The database remains usable afterwards, and reopening it
-    /// does not need to replay writes preceding the checkpoint.
+    /// does not need to replay writes preceding the flush.
     ///
     /// # Errors
     ///
     /// Returns an error if an I/O error occurs.
     /// A failure poisons the database.
-    pub fn checkpoint(&self) -> crate::Result<()> {
-        self.checkpoint_inner().inspect_err(|e| {
-            log::error!("Checkpoint failed, database is poisoned: {e:?}");
+    pub fn flush_all(&self) -> crate::Result<()> {
+        self.flush_all_inner().inspect_err(|e| {
+            log::error!("flush_all failed, database is poisoned: {e:?}");
             self.is_poisoned.poison();
         })
     }
 
-    fn checkpoint_inner(&self) -> crate::Result<()> {
+    fn flush_all_inner(&self) -> crate::Result<()> {
         let mut journal = self.supervisor.journal.get_writer()?;
 
         // Check after acquiring the journal lock so a concurrent failure cannot race us.

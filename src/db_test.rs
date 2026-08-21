@@ -1,9 +1,9 @@
 use crate::{Database, KeyspaceCreateOptions, KvSeparationOptions};
 use test_log::test;
 
-/// A checkpoint flushes every keyspace, removes the covered journal, and reopens without replay.
+/// Flushing all keyspaces removes the covered journal and allows reopening without replay.
 #[test]
-fn checkpoint_materializes_journal() -> crate::Result<()> {
+fn flush_all_materializes_journal() -> crate::Result<()> {
     use crate::AbstractTree;
 
     let folder = tempfile::tempdir()?;
@@ -25,7 +25,7 @@ fn checkpoint_materializes_journal() -> crate::Result<()> {
         let old_journal = db.supervisor.journal.path()?;
         assert!(old_journal.metadata()?.len() > 0);
 
-        db.checkpoint()?;
+        db.flush_all()?;
 
         let active_journal = db.supervisor.journal.path()?;
         assert_ne!(old_journal, active_journal);
@@ -37,7 +37,7 @@ fn checkpoint_materializes_journal() -> crate::Result<()> {
         assert_eq!(0, second.tree.sealed_memtable_count());
 
         first.insert("d", "4")?;
-        db.checkpoint()?;
+        db.flush_all()?;
     }
 
     {

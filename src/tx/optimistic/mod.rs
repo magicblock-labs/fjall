@@ -116,15 +116,15 @@ impl OptimisticTxDatabase {
         self.inner.persist(mode)
     }
 
-    /// Flushes all journaled writes into LSM-tree tables and starts a new journal.
+    /// Synchronously flushes all keyspaces into LSM-tree tables and starts a new journal.
     ///
-    /// See [`Database::checkpoint`] for details.
+    /// See [`Database::flush_all`] for details.
     ///
     /// # Errors
     ///
-    /// Returns an error if the checkpoint fails.
-    pub fn checkpoint(&self) -> crate::Result<()> {
-        self.inner.checkpoint()
+    /// Returns an error if flushing fails.
+    pub fn flush_all(&self) -> crate::Result<()> {
+        self.inner.flush_all()
     }
 
     /// Creates or opens a keyspace.
