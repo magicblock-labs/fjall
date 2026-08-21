@@ -364,14 +364,15 @@ impl Database {
 
     /// Flushes all journaled writes into LSM-tree tables and starts a new journal.
     ///
-    /// This blocks writes and keyspace changes for the duration of the checkpoint. Reads may
-    /// continue. The database remains usable afterwards, and reopening it does not need to replay
-    /// writes preceding the checkpoint.
+    /// This blocks writes and keyspace changes for the duration of the checkpoint.
+    /// Reads may continue.
+    /// The database remains usable afterwards, and reopening it
+    /// does not need to replay writes preceding the checkpoint.
     ///
     /// # Errors
     ///
-    /// Returns an error if rotating the journal, flushing a keyspace, or syncing the database
-    /// directory fails. A failure poisons the database.
+    /// Returns an error if an I/O error occurs.
+    /// A failure poisons the database.
     pub fn checkpoint(&self) -> crate::Result<()> {
         self.checkpoint_inner().inspect_err(|e| {
             log::error!("Checkpoint failed, database is poisoned: {e:?}");
