@@ -81,7 +81,7 @@ pub fn recover_journals<P: AsRef<Path>>(
             active: {
                 let id: JournalId = max_journal_id + 1;
 
-                Journal::create_new(path.join(id.to_string()))?
+                Journal::create_new(path.join(format!("{id}.jnl")))?
                     .with_compression(compression, compression_threshold)
             },
             sealed: vec![],
