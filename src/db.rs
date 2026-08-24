@@ -399,6 +399,7 @@ impl Database {
         self.supervisor.snapshot_tracker.advance_gc_watermark();
 
         for keyspace in keyspaces.values() {
+            // NOTE: lsm-tree checks for empty memtable, so we don't have to
             keyspace.tree.rotate_memtable();
             run_flush(
                 keyspace,
