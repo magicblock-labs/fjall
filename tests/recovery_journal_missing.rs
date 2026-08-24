@@ -1,7 +1,6 @@
 use fjall::{Database, PersistMode};
 use test_log::test;
 
-// Recovered journal files are properly serialized.
 #[test]
 fn db_journal_recovery_no_journal_files() -> fjall::Result<()> {
     let folder = tempfile::tempdir()?;
