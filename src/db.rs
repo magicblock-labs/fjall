@@ -388,39 +388,27 @@ impl Database {
             return Err(crate::Error::Poisoned);
         }
 
-        let keyspaces = self
-            .supervisor
-            .keyspaces
-            .read()
-            .map_err(|_| crate::Error::Poisoned)?;
+        let keyspaces = self.supervisor.keyspaces.read()?;
         let watermarks = self.supervisor.build_seqno_map(&keyspaces);
 
         self.supervisor
             .journal_manager
-            .write()
-            .map_err(|_| crate::Error::Poisoned)?
+            .write()?
             .rotate_journal(&mut journal, watermarks)?;
 
         self.supervisor.snapshot_tracker.advance_gc_watermark();
 
         for keyspace in keyspaces.values() {
             keyspace.tree.rotate_memtable();
-
-            while keyspace.tree.sealed_memtable_count() > 0 {
-                run_flush(
-                    keyspace,
-                    &self.supervisor.write_buffer_size,
-                    &self.supervisor.snapshot_tracker,
-                    &self.stats,
-                )?;
-            }
+            run_flush(
+                keyspace,
+                &self.supervisor.write_buffer_size,
+                &self.supervisor.snapshot_tracker,
+                &self.stats,
+            )?;
         }
 
-        self.supervisor
-            .journal_manager
-            .write()
-            .map_err(|_| crate::Error::Poisoned)?
-            .maintenance()?;
+        self.supervisor.journal_manager.write()?.maintenance()?;
         fsync_directory(&self.config.path)?;
 
         Ok(())
