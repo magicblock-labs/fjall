@@ -111,6 +111,20 @@ impl TxDatabase {
     ///
     /// See [`Database::flush_all`] for details.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use fjall::{KeyspaceCreateOptions, SingleWriterTxDatabase};
+    /// # let folder = tempfile::tempdir()?;
+    /// let db = SingleWriterTxDatabase::builder(folder).open()?;
+    /// let items = db.keyspace("my_items", KeyspaceCreateOptions::default)?;
+    ///
+    /// items.insert("a", "hello")?;
+    /// db.flush_all()?;
+    /// #
+    /// # Ok::<_, fjall::Error>(())
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns an error if flushing fails.
