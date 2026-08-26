@@ -130,6 +130,7 @@ impl OptimisticTxDatabase {
     ///
     /// items.insert("a", "hello")?;
     /// db.flush_all()?;
+    /// assert_eq!(1, items.inner().table_count());
     /// #
     /// # Ok::<_, fjall::Error>(())
     /// ```
