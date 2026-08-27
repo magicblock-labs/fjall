@@ -188,6 +188,9 @@ fn worker_tick(ctx: &WorkerState) -> crate::Result<bool> {
             };
 
             {
+                #[expect(clippy::expect_used)]
+                let keyspaces = ctx.supervisor.keyspaces.read().expect("lock is poisoned");
+
                 log::trace!("acquiring journal lock to maybe rotate journal");
                 let mut journal_writer = ctx.supervisor.journal.get_writer()?;
 
@@ -199,12 +202,7 @@ fn worker_tick(ctx: &WorkerState) -> crate::Result<bool> {
                         .write()
                         .expect("lock is poisoned");
 
-                    let seqno_map = {
-                        #[expect(clippy::expect_used)]
-                        let keyspaces = ctx.supervisor.keyspaces.write().expect("lock is poisoned");
-
-                        ctx.supervisor.build_seqno_map(&keyspaces)
-                    };
+                    let seqno_map = ctx.supervisor.build_seqno_map(&keyspaces);
 
                     journal_manager.rotate_journal(&mut journal_writer, seqno_map)?;
 

@@ -381,6 +381,7 @@ impl Database {
     }
 
     fn flush_all_inner(&self) -> crate::Result<()> {
+        let keyspaces = self.supervisor.keyspaces.read()?;
         let mut journal = self.supervisor.journal.get_writer()?;
 
         // Check after acquiring the journal lock so a concurrent failure cannot race us.
@@ -388,7 +389,6 @@ impl Database {
             return Err(crate::Error::Poisoned);
         }
 
-        let keyspaces = self.supervisor.keyspaces.read()?;
         let watermarks = self.supervisor.build_seqno_map(&keyspaces);
 
         self.supervisor
@@ -409,6 +409,7 @@ impl Database {
             )?;
         }
 
+        self.supervisor.flush_manager.clear();
         self.supervisor.journal_manager.write()?.maintenance()?;
         fsync_directory(&self.config.path)?;
 
